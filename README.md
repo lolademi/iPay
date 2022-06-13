@@ -1,1 +1,1 @@
-# iPay
+# Receive 
