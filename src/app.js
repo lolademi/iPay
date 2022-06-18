@@ -3,12 +3,15 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+var startDatabase = require('./config/database/start_db')
 
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 var app = express();
+
+startDatabase()
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -40,5 +43,5 @@ app.use(function(err, req, res, next) {
 });
 
 logger.info(' Logger Initialized ')
-logger.error( new Error(" An Error "))
+
 module.exports = app;
