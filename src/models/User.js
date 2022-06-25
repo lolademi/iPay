@@ -41,7 +41,7 @@ const UserSchema = new Schema
                 type: String, 
                 required: true
             },
-            isVerified:
+            emailVerified:
             {
                 type: Boolean, 
                 required: true, 
