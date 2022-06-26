@@ -11,10 +11,10 @@ module.exports = (app)=>
   {
 
       // Endpoints 
-      router.post('/', user.signup)
-
-
+      router.post('/signup', user.signup)
+      router.get('/verifyEmail/:verificationCode',user.verifyEmail)
+      router.post('/signin',user.signin)
 
       // Add Endpoints to app 
-      app.use('/signup',router) 
+      app.use('/api/v1',router) 
   }
