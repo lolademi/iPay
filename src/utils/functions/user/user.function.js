@@ -22,7 +22,7 @@ const authenticateUser = async function(email,password)
                         const returnFields = { _id: 1, email: 1, password: 1, firstname: 1, lastname: 1, emailVerified: 1 }
 
                         logger.info(' Getting user details from database ') 
-                        const user = await User.findOne({ ___email },returnFields)
+                        const user = await User.findOne({ email },returnFields)
                         
         
                          if( !user ) // User Email Not Correct 
