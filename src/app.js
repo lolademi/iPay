@@ -5,6 +5,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var startDatabase = require('./config/database/start_db')
 var morgan = require('morgan')
+var session = require('express-session') 
 
 
 var indexRouter = require('./routes/index');
@@ -22,6 +23,7 @@ app.set('view engine', 'hbs');
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(session({ secret: 'keyboard cat', resave: true, saveUninitialized: false, cookie: { maxAge: 60000 }}))
 app.use(morgan('dev'))
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -32,6 +34,7 @@ app.use('/', indexRouter);
 require('./routes/users')(app) // User 
 require('./routes/lead')(app) // Leads 
 require('./routes/contactUs')(app) // Contact Us 
+require('./routes/business')(app) // business 
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
