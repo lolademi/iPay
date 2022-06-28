@@ -187,7 +187,7 @@ const create = async function(req, res, next)
                     try
                     {
                         // Get request body and save business details  
-                        const { } = req.body 
+                        const { businessType } = req.body 
                         
                         
                     }

@@ -35,6 +35,7 @@ require('./routes/users')(app) // User
 require('./routes/lead')(app) // Leads 
 require('./routes/contactUs')(app) // Contact Us 
 require('./routes/business')(app) // business 
+require('./routes/paymentLink')(app) // Payment Link 
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
