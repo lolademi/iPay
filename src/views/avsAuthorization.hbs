@@ -1,0 +1,16 @@
+
+
+
+
+
+
+
+<form action="/api/v1/payment/authorize" method="post">
+
+<!-- Card Pin --> 
+  <label for="fname">Avs details:</label><br>
+  <input type="text" id="cardPin" name="cardPin" value="3310"><br>
+
+  <input type="hidden" name="authorizationType" value="avsAuthorization">
+  <input type="submit" value="Submit">
+</form>

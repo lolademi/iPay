@@ -4,18 +4,58 @@ const logger = require('../../health/logging/index')
 const PaymentLink = require('../../models/PaymentLink')
 const crypto = require('crypto') 
 
+
+
+const custom_name_exists = async function(req, res, next)
+                {
+                    try 
+                    {
+                        const link_id = req.body.custom_name 
+                        const customLinkNameExists = await PaymentLink.find({link_id },{ _id: 1 })
+
+                        if( !customLinkNameExists )
+                        {
+                            return res.status(200).json({"success": true, "msg":" custom name available "})
+                        }
+
+                        return res.status(400).json({"success": false, "msg":" custom name taken "})
+
+                    }
+                    catch(err)
+                    {
+                        logger.error(err)
+                        return serverErrorResponse(' Error occured while checking if custom link name taken ') 
+                    }
+                }
+
+
 const create = async function(req, res, next )
         {
             try 
             {
-                const { owner_id, name, amount, description, currency, redirectUrl} = req.body
-                // create link here 
-                
-                const linkCode = crypto.randomBytes(15).toString('hex');
-                const link = `http://${req.headers.host}/api/v1/pay/${linkCode}`
+                const { owner_id, name, amount, description, currency, redirect_url, custom_name } = req.body
+                // create link here        
 
-                const paymentLinkDoc = { owner_id, name, amount, description, currency, redirectUrl, link }
-                if( !redirectUrl ){ delete paymentLinkDoc.redirectUrl } 
+
+                var linkCode, link 
+
+                if( !custom_name )
+                {
+                     linkCode = crypto.randomBytes(15).toString('hex');
+                    link = `http://${req.headers.host}/api/v1/payment/${linkCode}`
+                }
+
+                if( custom_name )
+                {
+                    linkCode = custom_name
+                     link = `http://${req.headers.host}/api/v1/payment/${linkCode}`
+                }
+
+                
+                const link_id = linkCode 
+                const paymentLinkDoc = { owner_id, name, amount, description, currency, redirect_url, link, link_id }
+                if( !redirect_url ){ delete paymentLinkDoc.redirect_url } 
+                if( !custom_name){ delete paymentLinkDoc.custom_name } 
                 const newPaymentLink = new PaymentLink(paymentLinkDoc) 
 
                 const paymentLink = await newPaymentLink.save() 
@@ -108,4 +148,4 @@ const deleteLink = async function(req, res, next)
                 }
 
 
-module.exports = { create, getAll, view, update, deleteLink }
+module.exports = { create, getAll, view, update, deleteLink, custom_name_exists }

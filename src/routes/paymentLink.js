@@ -10,6 +10,8 @@ module.exports = (app) =>
     router.get('/:_id', paymentLink.view ) 
     router.post('/:_id', paymentLink.update )
     router.delete('/:_id', paymentLink.deleteLink ) 
+    router.get('/customName', paymentLink.custom_name_exists )
 
     app.use('/api/v1/paymentLink', router) 
 }
+

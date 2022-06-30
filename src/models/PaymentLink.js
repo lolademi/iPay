@@ -48,7 +48,7 @@ const PaymentLinkSchema = new Schema
                     required: true, 
                     trim: true
                 },
-                redirectUrl:
+                redirect_url:
                 {
                     type: String
                 },
@@ -57,6 +57,11 @@ const PaymentLinkSchema = new Schema
                     type: Number, 
                     required: true, 
                     default: 0 
+                },
+                link_id:
+                {
+                    type: String, 
+                    minlength: 5 
                 }
             }
         )
