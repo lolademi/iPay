@@ -9,3 +9,4 @@ Implement a feature that assures proper recording of successfull payment, even i
 What if in app.js I run the start database function and the server does not start, how will it be handled 
 Improve the database design
 Improve the server time keeping for accuracy 
+Account For Connection Timeouts and network errors 

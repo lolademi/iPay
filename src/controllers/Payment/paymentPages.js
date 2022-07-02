@@ -11,30 +11,21 @@ const flw = new Flutterwave( process.env.FLUTTERWAVE_PUBLIC_KEY, process.env.FLU
 // Models 
 const PaymentLink = require('../../models/PaymentLink') 
 
-const showPaymentDetails = async function(req, res, next)
-        {
-            try 
-            {
-                const _id = req.params._id 
-                const fields = { amount: 1, name: 1, description: 1 } 
-                const paymentLinkDetails = await PaymentLink.findOne({ _id },fields )
-
-                return res.status(200).json({"success": true, paymentLinkDetails })
-            }
-            catch(err)
-            {
-                logger.error(err)
-                return serverErrorResponse('Server encountered errror while displaying payment page',res)
-            }
-        }
-
-
         
 const getCardDetails = async function(req, res, next)
 {
     try 
     {
-        return res.status(200).render('payWithCard')
+        console.log(" In here ogaga ")
+
+        const link_id = req.params.link_id 
+        const fields = { amount: 1, name: 1, description: 1, currency: 1 } 
+        const paymentDetails = await PaymentLink.findOne({ link_id },fields )
+
+        const payload = { link_id, amount: paymentDetails.amount, name: paymentDetails.name, description: paymentDetails.description,
+        currency: paymentDetails.currency }
+
+        return res.status(200).render('payWithCard',payload)
     }
     catch(err)
     {
@@ -102,4 +93,4 @@ const getCardPinAuthDetails = async function(req, res, next)
                     }
                 }
 
-module.exports = { showPaymentDetails, getCardDetails, getCardPinAuthDetails, getAvsAuthDetails, getOtp, success }
+module.exports = { getCardDetails, getCardPinAuthDetails, getAvsAuthDetails, getOtp, success }

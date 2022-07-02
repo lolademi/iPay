@@ -1,16 +1,22 @@
 
-
-
-
-
-
-
-<form action="/api/v1/payment/authorize" method="post">
+<form action="/api/v1/payment/auth/authorize" method="post">
 
 <!-- Card Pin --> 
-  <label for="fname">Avs details:</label><br>
-  <input type="text" id="cardPin" name="cardPin" value="3310"><br>
+  <label for="fname">City:</label><br>
+  <input type="text" id="city" name="city" value="San Francisco"><br>
 
-  <input type="hidden" name="authorizationType" value="avsAuthorization">
+
+  <label for="fname">Address:</label><br>
+  <input type="text" id="address" name="address" value="69 Fremont Street"><br>
+
+    <label for="fname">state:</label><br>
+  <input type="text" id="state" name="state" value="CA"><br>
+
+    <label for="fname">country:</label><br>
+  <input type="text" id="country" name="country" value="US"><br>
+
+    <label for="fname">zipcode:</label><br>
+  <input type="text" id="zipcode" name="zipcode" value="94105"><br>
+
   <input type="submit" value="Submit">
 </form>

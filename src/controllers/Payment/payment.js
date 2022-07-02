@@ -1,5 +1,6 @@
 require('dotenv').config() // ENV
 
+
 // Utilities 
 const logger = require('../../health/logging/index')
 const { serverErrorResponse } = require('../../utils/response/res_500')
@@ -23,7 +24,7 @@ const generateTransactionRef = function(tx_ref_length)
 
             var tx_ref = ''
             let i, random_char 
-            for( i = 0; i < tex_ref_length; i++ )
+            for( i = 0; i < tx_ref_length; i++ )
             {
                 random_char = characters[ Math.floor( Math.random() * tx_ref_length ) ]
                 tx_ref += random_char 
@@ -38,51 +39,77 @@ const initiate = async function(req, res, next)
                     try 
                     {
 
-                        // Payment Link ID 
-                        const link_id = req.params._id
-
-                        // get customers email address and phone_number 
-                        const fields = { amount: 1 }
-                        // Find payment link 
-                        const paymentData = await PaymentLink.findOne({ link_id },fields)
-                        const tx_ref = generateTransactionRef(4) + '-' + generateTransactionRef(2)
-                        // Payment Session Data 
-                        req.session.merchant_id = paymentData.merchant_id 
-                        req.session.transactionCurrency = "USD" 
-                        req.session.transactionAmount = paymentData.amount 
-                        req.session.customer_email = 'esavwede84@gmail.com' 
-                        req.session.tx_ref = tx_ref 
+                        // Customer Details 
+                        var { email, phone, fullname, card_number, cvv, expirationDate } = req.body
+                        
+                        const expirationArr = expirationDate.split('/') 
+                        const expirationMonth = expirationArr[0]
+                        const expirationYear = expirationArr[1] 
                         
 
+                        // Payment Details 
+                        const link_id = req.params.link_id 
+                        const fields = { amount: 1, redirect_url: 1, currency: 1, merchant_id: 1 }
+                        const paymentData = await PaymentLink.findOne({ link_id },fields)
+
+                        // Payment Details not found 
                         if( !paymentData ){ return res.status(400).json({ "success": false, "msg":" invalid payment link"})}
 
+                        logger.info(' Fetched Payment Details For session ') //log 
+                        logger.info( paymentData ) 
+
+                        // Generate Transaction Reference For Payment 
+                        const tx_ref = generateTransactionRef(4) + '-' + generateTransactionRef(2)
+
+
+                        // Store Payment Session Data 
+                        req.session.merchant_id = paymentData.merchant_id 
+                        req.session.transactionCurrency = paymentData.currency
+                        req.session.transactionAmount = paymentData.amount 
+                        req.session.customer_email = email 
+                        req.session.tx_ref = tx_ref 
+                        req.session.customer_phone = phone 
+                        req.session.customer_fullname = fullname 
+                        req.session.redirect_url = paymentData.redirect_url || `http://${req.headers.host}/api/v1/payment/success`
+
+                        req.session.save() 
+                        
+                        logger.info(' Stored payment details for session ') // log 
 
                         var payload = 
                         {
-                            "card_number": "4556052704172643",
-                            "cvv": "899",
-                            "expiry_month": "01",
-                            "expiry_year": "23",
-                            "currency": paymentData.currency,
-                            "amount": paymentData.amount ,
-                            "email": "esavwede84@gmail.com",
-                            "phone_number": "08081848029",
-                            "fullname": "Flutterwave Developers",
-                            tx_ref,
-                            "redirect_url": paymentData.redirect_url || `http://${req.headers.host}/api/v1/payment/success`,
+                            "fullname": req.session.customer_fullname,
+                            "card_number": card_number,
+                            "cvv": cvv,
+                            "expiry_month": expirationMonth,
+                            "expiry_year": expirationYear,
+                            "currency": req.session.transactionCurrency,
+                            "amount": req.session.transactionAmount,
+                            "email": req.session.customer_email,
+                            "phone_number": req.session.customer_phone,
+                            "tx_ref": req.session.tx_ref,
+                            "redirect_url": req.session.redirect_url ,
                             "enckey": process.env.FLUTTERWAVE_ENCRYPTION_KEY
                         }
 
+
+                        logger.info(' Created Payload ')//log 
+                        logger.info(' Charging Card ') // log 
+
+
                         const response = await flw.Charge.card(payload)
                         
+                        logger.info( response ) 
+                        console.log( response )
+                       
 
-                        console.log(' Here ogaga ')
-                        console.log( response ) 
+                        const authType = response.meta.authorization.mode
 
-
-                        if( response.meta.authorization.mode === 'redirect' ) // Only the data.id is needed to verify the payment 
+                        if( authType === 'redirect' ) 
                         {
-                            console.log(' Authorization mode is redirect ') 
+                            
+
+                            logger.info(' Redirect Auth required ')
                             req.session.transaction_id = response.data.id // transaction id is needed to verify payment 
                             req.session.flw_ref = response.data.flw_ref 
 
@@ -91,42 +118,33 @@ const initiate = async function(req, res, next)
                             return res.status(200).redirect( response.meta.authorization.redirect) 
                         }
 
-                        if( response.meta.authorization.mode === 'pin')
+                        if( authType === 'pin')
                         {
+
+                            logger.info(' Pin Auth required  ')
+
                             req.session.paymentAuthType = 'pin'
+                            req.session.payload = payload // Save Card Details Payload 
                             req.session.save() 
-                            console.log(' User pin required for authorization ')
-
-                            var authorization = { "mode":"pin", "pin":" "}
-
-                            req.session.pin_auth_obj = authorization 
-                            req.session.payload = payload 
-                            return res.status(200).redirect('/api/v1/payment/cardPinAuthorization')
+                            
+                            
+                            return res.status(200).redirect('/api/v1/payment/auth/pin')
                         }
 
-                        if( response.meta.authorization.mode === 'avs_noauth') 
+                        if( authType === 'avs_noauth') 
                         {
-                            console.log('authorization mode is avs_noauth ')
+                            
+                            logger.info(' avs auth method ')
 
                             req.session.paymentAuthType = 'avs_noauth'
-                            req.session.save() 
-
-                            let i  
-                            const fieldKeys = response.meta.authorization.fields 
-                            var authorization = { "mode":"avs_noauth" }
-
-                            for( i = 0; i < fieldKeys; i++ )
-                            {
-                                authorization[fieldKeys[i]] = " " 
-                            }
-
-
-                            req.session.avs_auth_obj = authorization 
                             req.session.payload = payload 
-                            return res.status(200).redirect('/api/v1/payment/avsAuthorization')
+                            req.session.save()                            
+                           
+                            return res.status(200).redirect('/api/v1/payment/auth/avs')
                         }
 
-                        // if none of these, go directly to verify 
+                        // if still here: 
+                       // No auth, Just Verify Payment Straight Away 
 
                     }
                     catch(err)
@@ -135,6 +153,9 @@ const initiate = async function(req, res, next)
                         return serverErrorResponse('Server encountered errror while initiating payment ',res)
                     }
                 }
+
+
+
 
 const authorize = async function(req, res, next )
                 {
@@ -145,36 +166,42 @@ const authorize = async function(req, res, next )
 
                         if( authorizationType === 'pin' )
                         {
-                            console.log(' Card Pin authorization ')
-                            console.log(' User entered pin ')
-                            
-                            const cardPin = req.body.cardPin 
-                            console.log(cardPin)
-                            const authorization = {
+                            const pin = req.body.pin 
+
+                           logger.info(' Pin authorization ')
+                           logger.info( pin ) 
+
+                            const authorizationBody = {
                                 "mode":"pin",
-                                "pin":"3310"
+                                 pin
                             }
 
 
+                            // Retrieve Payload from session and modify 
                             var payload = req.session.payload 
-                            payload.authorization = authorization 
+                            payload.authorization = authorizationBody
 
 
+
+                            // Charge Card Again 
                             const response = await flw.Charge.card(payload)
                             const validationMode = response.meta.authorization.mode 
+
+                            // Save Flutterwave reference 
                             req.session.flw_ref = response.data.flw_ref 
                             req.session.save() 
 
+
                             if( validationMode === "otp" )
                             {
-                                console.log(" Validation mode is otp ")
-                                return res.status(200).redirect('/api/v1/payment/otp')
+                                logger.info(' Otp Validation ')
+                                return res.status(200).redirect('/api/v1/payment/validate/otp')
                             }
 
 
                             if( validationMode === "redirect")
                             {
-                                console.log(" Validation mode is redirect ")
+                                logger.info(' Validation mode is redirect ')
                                 const redirect = resonse.meta.authorization.redirect 
                                 return res.status(200).redirect(redirect)
                             }
@@ -187,8 +214,6 @@ const authorize = async function(req, res, next )
 
                         if( authorizationType === 'avs_noauth' )
                         {
-                            console.log(' avs Pin authorization ')
-                            console.log(' User entered avs details ')
                             
                           const authorization = req.session.avs_auth_obj 
                           console.log( authorization ) 
@@ -196,11 +221,11 @@ const authorize = async function(req, res, next )
                           payload.authorization = 
                           {
                                "mode": "avs_noauth",
-                               "city":  "San Francisco",
-                                "address":  "69 Fremont Street",
-                                "state":  "CA",
-                                "country":  "US",
-                                "zipcode":  "94105"
+                               "city":  req.body.city,
+                                "address":  req.body.address,
+                                "state":  req.body.state,
+                                "country":  req.body.country,
+                                "zipcode":  req.body.zipcode 
                           } 
 
 
@@ -208,21 +233,22 @@ const authorize = async function(req, res, next )
                           .then((response)=>{
                             console.dir( response )
                             const validationMode = response.meta.authorization.mode 
-                      
+                            
                           req.session.flw_ref = response.data.flw_ref 
                           req.session.save() 
 
 
                           if( validationMode === "otp" )
                           {
-                              console.log(" Validation mode is otp ")
-                              return res.status(200).redirect('/api/v1/payment/otp')
+                              logger.info(' Validation mode is otp')
+                              return res.status(200).redirect('/api/v1/payment/validate/otp')
                           }
 
                           if( validationMode === "redirect")
                           {
-                              console.log(" Validation mode is redirect ")
-                              const redirect = resonse.meta.authorization.redirect 
+                              logger.info(' validation mode is redirect ')
+                              const redirect = response.meta.authorization.redirect 
+                              console.log( redirect ) 
                               return res.status(200).redirect(redirect)
                           }
                     
@@ -241,6 +267,8 @@ const authorize = async function(req, res, next )
                     }
                 }
 
+
+                
 const validate = async function(req, res, next)
                 {
                     try 
@@ -250,12 +278,15 @@ const validate = async function(req, res, next)
 
                         if( validationType === 'otp' )
                         {
-                            const response = await flw.Charge.validate({
+                            const response = await flw.Charge.validate
+                            ({
                                 otp: req.body.otp,
                                 flw_ref: req.session.flw_ref
                             });
     
-                            console.log( response.data.status ) 
+                            logger.info(' Validation Complete ')
+                            logger.info(  response.data.status  ) 
+
                             const transaction_id = response.data.id  // Used to verify payment 
                             // Verify Payment 
                            const paymentComplete = await flw.Transaction.verify({ id: transaction_id });
@@ -263,6 +294,7 @@ const validate = async function(req, res, next)
                            if( paymentComplete.status === 'successful' )
                            {
 
+                            logger.info(' Payment Successfull ')
                             const fields = { _id: 1, main_balance: 1, main_currency: 1, wallets: 1 }
                             const merchant_id = req.session.merchant_id
                             const transaction_currency = req.session.transactionCurrency
@@ -284,7 +316,7 @@ const validate = async function(req, res, next)
                               for( i = 0; i < merchantBalanceDetails.wallets.length; i++ )
                               {
 
-                                if( merchantBalanceDetails.wallets[i].balance === main_currency )
+                                if( merchantBalanceDetails.wallets[i].currency === main_currency )
                                 {
                                     merchantBalanceDetails.wallets[i].balance += req.session.transactionAmount 
                                 }
@@ -320,7 +352,7 @@ const validate = async function(req, res, next)
                             }
 
                                 // Update transactions  
-                                const newTransactionDoc = { tex_ref: req.session.tx_ref, customer_email: req.session.customer_email,
+                                const newTransactionDoc = { tx_ref: req.session.tx_ref, customer_email: req.session.customer_email,
                                 channel: 'card', status:'success', currency: req.session.transactionCurrency ,
                                 amount: req.session.transactionAmount, description: req.session.customer_email +'\'s payment'}
 
@@ -330,19 +362,21 @@ const validate = async function(req, res, next)
 
                                 console.log(" Transaction Updated ")
 
-                                return res.status(200).json({"success": true, "msg":" Payment Complete "})
-                                // Redirect to custom redirect if any
-                                // Redirect to success page if no custom redirect 
+                                return res.status(200).redirect( req.session.redirect_url ) 
+                                
 
                            }else 
                            if( paymentComplete.status === 'pending' )
                            {
                                 // send message of payment processing with transaction_id 
                                 // verify payment link can be used to verify payment 
+
+                                return res.status(200).json({"success": false, "msg":"transaction pending "})
                            }
                            else 
                            {
                                 // Transaction Failed 
+                                return res.status(200).json({"success": false, "msg":"transaction failed"})
                            }
                        
                         }
