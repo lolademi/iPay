@@ -4,7 +4,7 @@ This endpoint signs in the user into the application and returns signin data
 
 
 ###### ENDPOINT 
-> /api/v1/user/signup
+> /api/v1/signup
 
 
 ###### METHOD 

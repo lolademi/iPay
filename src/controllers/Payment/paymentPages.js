@@ -1,10 +1,35 @@
 require('dotenv').config()
 const logger = require('../../health/logging/index')
 const { serverErrorResponse } = require('../../utils/response/res_500')
+
+
+// Flutterwave 
 const Flutterwave = require('flutterwave-node-v3')
 const flw = new Flutterwave( process.env.FLUTTERWAVE_PUBLIC_KEY, process.env.FLUTTERWAVE_SECRET_KEY ) 
 
 
+// Models 
+const PaymentLink = require('../../models/PaymentLink') 
+
+const showPaymentDetails = async function(req, res, next)
+        {
+            try 
+            {
+                const _id = req.params._id 
+                const fields = { amount: 1, name: 1, description: 1 } 
+                const paymentLinkDetails = await PaymentLink.findOne({ _id },fields )
+
+                return res.status(200).json({"success": true, paymentLinkDetails })
+            }
+            catch(err)
+            {
+                logger.error(err)
+                return serverErrorResponse('Server encountered errror while displaying payment page',res)
+            }
+        }
+
+
+        
 const getCardDetails = async function(req, res, next)
 {
     try 
@@ -77,4 +102,4 @@ const getCardPinAuthDetails = async function(req, res, next)
                     }
                 }
 
-module.exports = { getCardDetails, getCardPinAuthDetails, getAvsAuthDetails, getOtp, success }
+module.exports = { showPaymentDetails, getCardDetails, getCardPinAuthDetails, getAvsAuthDetails, getOtp, success }

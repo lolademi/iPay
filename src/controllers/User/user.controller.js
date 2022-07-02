@@ -11,6 +11,7 @@ const crypto = require('crypto');// User to create verification string
 
 // models 
 const User = require('../../models/User')
+const MerchantBalance = require('../../models/MerchantBalance') 
 
 
 const sendNewUserMail = async function(firstname,email,verificationLink)
@@ -65,12 +66,17 @@ const signup = async function(req, res, next)
                 console.log(" error not with verification link ")
                 const newUserDoc = { firstname, lastname, email, password: hashedPassword, emailVerificationCode } 
                 const newUser = new User(newUserDoc) 
-                const _now = await newUser.save() 
-                console.dir( _now ) 
+                const createdUser = await newUser.save() 
+
+                console.dir( createdUser) 
 
                 const mailSent = await sendNewUserMail(firstname,email,verificationLink)  
                 console.log(' mailsent is ' + mailSent ) 
                 
+                const merchantBalanceDoc = { merchant_id: createdUser._id }
+                const newMerchantBalance = new MerchantBalance(merchantBalanceDoc) 
+                await newMerchantBalance.save() 
+
                 if( !mailSent ){ await User.deleteOne({ email });  return serverErrorResponse(res," Server encountered error during signup  ") }
 
                 return res.status(201).json({"success": true, "msg":" new user created, check email for verfication link "})

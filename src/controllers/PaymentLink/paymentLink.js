@@ -10,8 +10,9 @@ const custom_name_exists = async function(req, res, next)
                 {
                     try 
                     {
-                        const link_id = req.body.custom_name 
-                        const customLinkNameExists = await PaymentLink.find({link_id },{ _id: 1 })
+                        const link_id = req.params.name 
+                        const customLinkNameExists = await PaymentLink.findOne({link_id })
+                        
 
                         if( !customLinkNameExists )
                         {
@@ -36,7 +37,7 @@ const create = async function(req, res, next )
                 const { owner_id, name, amount, description, currency, redirect_url, custom_name } = req.body
                 // create link here        
 
-
+                const merchant_id = "62bf86bd489569c1ee8ca0e3"
                 var linkCode, link 
 
                 if( !custom_name )
@@ -53,7 +54,7 @@ const create = async function(req, res, next )
 
                 
                 const link_id = linkCode 
-                const paymentLinkDoc = { owner_id, name, amount, description, currency, redirect_url, link, link_id }
+                const paymentLinkDoc = { merchant_id, name, amount, description, currency, redirect_url, link, link_id }
                 if( !redirect_url ){ delete paymentLinkDoc.redirect_url } 
                 if( !custom_name){ delete paymentLinkDoc.custom_name } 
                 const newPaymentLink = new PaymentLink(paymentLinkDoc) 
@@ -75,9 +76,10 @@ const getAll = async function(req, res, next)
                 try 
                 {
 
+                    const merchant_id = "62bf86bd489569c1ee8ca0e3"
                     const options = { limit: 5 , skip: 0, sort: { date: -1 } }
-                    const fields = { name: 1, amount: 1, currency: 1, description: 1, link: 1}
-                    const paymentLinks = await PaymentLink.find({},fields,options)
+                    const fields = { name: 1, amount: 1, currency: 1, description: 1, link: 1, createdOn: 1}
+                    const paymentLinks = await PaymentLink.find({ merchant_id},fields,options)
                     
 
                     return res.status(200).json({"success": true, "msg":"payment links fetched ", paymentLinks })
@@ -115,7 +117,7 @@ const update = async function(req, res, next)
                     {
 
                         const _id = req.params._id 
-                        const paymentLink = await PaymentLink.updateOne({ _id },{ $set: req.body },{ new: true })
+                        const paymentLink = await PaymentLink.findOneAndUpdate({ _id },{ $set: req.body },{ new: true })
 
 
                         return res.status(200).json({"success": true, "msg":" payment linked updated", paymentLink})

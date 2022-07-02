@@ -7,7 +7,7 @@ const Schema = mongoose.Schema
 const PaymentLinkSchema = new Schema
         (
             {
-                owner_id:
+                merchant_id:
                 {
                     type: mongoose.Types.ObjectId, 
                     required: true
@@ -47,7 +47,7 @@ const PaymentLinkSchema = new Schema
                     type: String, 
                     required: true, 
                     trim: true
-                },
+                }, 
                 redirect_url:
                 {
                     type: String
@@ -62,6 +62,10 @@ const PaymentLinkSchema = new Schema
                 {
                     type: String, 
                     minlength: 5 
+                },
+                merchant_logo:
+                {
+                    type: String 
                 }
             }
         )

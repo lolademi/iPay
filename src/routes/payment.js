@@ -10,6 +10,7 @@ module.exports  = (app) =>
 {
 
     router.get('/', paymentPages.getCardDetails )
+    router.get('/:_id', paymentPages.showPaymentDetails ) 
     router.post('/:_id', payment.initiate ) 
     router.get('/avsAuthorization', paymentPages.getAvsAuthDetails) 
     router.get('/cardPinAuthorization', paymentPages.getCardPinAuthDetails )
