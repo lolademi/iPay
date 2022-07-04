@@ -1,0 +1,16 @@
+User should not be able to create payment link twice 
+User should only be able to update authorized fields 
+User details like  _id, email, firstname should be saved and retreived from req.user 
+
+Should I send a customer response, before updating the merchant, even when the transaction is totally successfull ? 
+Implement Charges to User payment 
+Determine if the merchant should add payment charges to amount, or payment charges should be debit from merchant wallet
+Implement a feature that assures proper recording of successfull payment, even if the database or app fails
+What if in app.js I run the start database function and the server does not start, how will it be handled 
+Improve the database design
+Improve the server time keeping for accuracy 
+Account For Connection Timeouts and network errors 
+Design better endpoint names 
+Currency Should be in floats 
+Set Session Expiration for payments and application 
+Optimize database design for fast search 

@@ -1,0 +1,40 @@
+
+
+<form action="/api/v1/payment/{{link_id}}" method="post">
+
+
+<!-- Payment Details --> 
+<h3> Name: {{name}}</h3> 
+<h3> Amount: {{currency}} {{amount}}</h3> 
+<h3> Description{{description}}</h3> 
+
+
+
+<!-- Card Holder Email --> 
+  <label for="fname">email:</label><br>
+  <input type="text" id="email" name="email" value="esavwede84@gmail.com"><br>
+
+<!-- Card Holder phone Number --> 
+  <label for="fname">phone:</label><br>
+  <input type="text" id="phone" name="phone" value="08081848029"><br>
+
+<!-- Card Holder Name --> 
+  <label for="fname">name:</label><br>
+  <input type="text" id="fullname" name="fullname" value="John Doe"><br>
+
+<!-- Card Number --> 
+  <label for="cardNumber"> cardNumber :</label><br>
+  <input type="text" id="card_number" name="card_number" value="4556052704172643"><br>
+
+<!-- Expiration Date --> 
+  <label for="expiration">Expiration:</label><br>
+  <input type="text" id="expirationDate" name="expirationDate" value="01/23"><br><br>
+
+
+<!-- CVV --> 
+<label for="cvv"> cvv:</label><br>
+<input type="text" id="cvv" name="cvv" value="899"><br><br>
+
+
+  <input type="submit" value="Submit">
+</form>
