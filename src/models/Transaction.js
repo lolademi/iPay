@@ -6,6 +6,11 @@ const Schema = mongoose.Schema
 const TransactionSchema = new Schema 
     (
         {
+            merchant_id:
+            {
+                type: mongoose.Types.ObjectId, 
+                required: true 
+            },
             tx_ref:
             {
                 type: String, 
