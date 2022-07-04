@@ -34,6 +34,7 @@ const generateTransactionRef = function(tx_ref_length)
         }
 
 
+
 const initiate = async function(req, res, next)
                 {
                     try 
@@ -420,6 +421,7 @@ const validate = async function(req, res, next)
 
                             var merchantBalanceDetails = await MerchantBalance.findOne({ merchant_id },fields)    
                             
+                            console.log( merchantBalanceDetails ) 
                             
                             var { main_currency } = merchantBalanceDetails
 

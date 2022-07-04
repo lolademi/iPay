@@ -34,10 +34,10 @@ const create = async function(req, res, next )
         {
             try 
             {
-                const { owner_id, name, amount, description, currency, redirect_url, custom_name } = req.body
+                const { name, amount, description, currency, redirect_url, custom_name } = req.body
                 // create link here        
 
-                const merchant_id = "62bf86bd489569c1ee8ca0e3"
+                const merchant_id = "62c32a3a7b7d619b20830f4c"
                 var linkCode, link 
 
                 if( !custom_name )
@@ -48,7 +48,15 @@ const create = async function(req, res, next )
 
                 if( custom_name )
                 {
-                    linkCode = custom_name
+                        const link_id = custom_name 
+                        const customLinkNameExists = await PaymentLink.findOne({link_id })
+                        
+                        if( customLinkNameExists )
+                        {
+                            return res.status(400).json({"success": false, "msg":" custom name taken "})
+                        }
+
+                     linkCode = custom_name
                      link = `http://${req.headers.host}/api/v1/payment/${linkCode}`
                 }
 
@@ -131,6 +139,8 @@ const update = async function(req, res, next)
                 }
 
 
+                
+
 
 const deleteLink = async function(req, res, next)
                 {
@@ -148,6 +158,8 @@ const deleteLink = async function(req, res, next)
                         return serverErrorResponse('Server Encountered error while deleting payment link ',res) 
                     }
                 }
+
+
 
 
 module.exports = { create, getAll, view, update, deleteLink, custom_name_exists }
