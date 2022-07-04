@@ -12,5 +12,5 @@ Improve the server time keeping for accuracy
 Account For Connection Timeouts and network errors 
 Design better endpoint names 
 Currency Should be in floats 
-Set Session Expiration 
+Set Session Expiration for payments and application 
 Optimize database design for fast search 
