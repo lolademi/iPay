@@ -60,7 +60,7 @@ const initiate = async function(req, res, next)
 
                         // Generate Transaction Reference For Payment 
                         const tx_ref = generateTransactionRef(4) + '-' + generateTransactionRef(2)
-
+                        const customer_redirect = paymentData.redirect_url || `http://${req.headers.host}/api/v1/payment/success`
 
                         // Store Payment Session Data 
                         req.session.merchant_id = paymentData.merchant_id 
@@ -70,7 +70,8 @@ const initiate = async function(req, res, next)
                         req.session.tx_ref = tx_ref 
                         req.session.customer_phone = phone 
                         req.session.customer_fullname = fullname 
-                        req.session.redirect_url = paymentData.redirect_url || `http://${req.headers.host}/api/v1/payment/success`
+                        req.session.redirect_url = `http://${req.headers.host}/api/v1/payment/validate/verify`
+                        req.session.customer_redirect = customer_redirect
 
                         req.session.save() 
                         
@@ -154,9 +155,6 @@ const initiate = async function(req, res, next)
                     }
                 }
 
-
-
-
 const authorize = async function(req, res, next )
                 {
                     try 
@@ -202,6 +200,7 @@ const authorize = async function(req, res, next )
                             if( validationMode === "redirect")
                             {
                                 logger.info(' Validation mode is redirect ')
+                                res.session.transaction_id = response.data.id 
                                 const redirect = resonse.meta.authorization.redirect 
                                 return res.status(200).redirect(redirect)
                             }
@@ -214,9 +213,7 @@ const authorize = async function(req, res, next )
 
                         if( authorizationType === 'avs_noauth' )
                         {
-                            
-                          const authorization = req.session.avs_auth_obj 
-                          console.log( authorization ) 
+                      
                           var payload = req.session.payload 
                           payload.authorization = 
                           {
@@ -241,12 +238,20 @@ const authorize = async function(req, res, next )
                           if( validationMode === "otp" )
                           {
                               logger.info(' Validation mode is otp')
+                              req.session.validationMode = 'otp' 
+                              req.session.save() 
+
                               return res.status(200).redirect('/api/v1/payment/validate/otp')
                           }
 
                           if( validationMode === "redirect")
                           {
                               logger.info(' validation mode is redirect ')
+                              req.session.validationMode = 'redirect' 
+                              req.session.transaction_id = response.data.id 
+                              
+                              req.session.save() 
+
                               const redirect = response.meta.authorization.redirect 
                               console.log( redirect ) 
                               return res.status(200).redirect(redirect)
@@ -274,10 +279,13 @@ const validate = async function(req, res, next)
                     try 
                     {
 
-                        const validationType = req.body.validationType // otp 
+                        
+                        const validationMode = req.session.validationMode 
 
-                        if( validationType === 'otp' )
+                        if( validationMode === 'otp' )
                         {
+
+                            logger.info(' started payment validation for otp ')
                             const response = await flw.Charge.validate
                             ({
                                 otp: req.body.otp,
@@ -381,11 +389,118 @@ const validate = async function(req, res, next)
                        
                         }
 
+
+                        if( validationMode === 'redirect')
+                        {
+
+                            logger.info(' Started validation for redirect ') 
+                            logger.info(' Validation mode is redirect ')
+                            const tx_ref = req.query.tx_ref  
+                            const transaction_id = req.session.transaction_id  
+
+                            console.log( transaction_id ) 
+
+                           const paymentComplete = await flw.Transaction.verify({ id: transaction_id });
+                           
+
+                           logger.info( paymentComplete) 
+                           console.log( transaction_id ) 
+                           console.log( paymentComplete )
+                           console.log( paymentComplete.data.status ) 
+
+
+                           if( paymentComplete.data.status === 'successful' )
+                           {
+
+                            logger.info(' Payment Successfull ')
+                            const fields = { _id: 1, main_balance: 1, main_currency: 1, wallets: 1 }
+                            const merchant_id = req.session.merchant_id
+                            const transaction_currency = req.session.transactionCurrency
+
+
+                            var merchantBalanceDetails = await MerchantBalance.findOne({ merchant_id },fields)    
+                            
+                            
+                            var { main_currency } = merchantBalanceDetails
+
+                            
+                            if( main_currency === transaction_currency )
+                            {
+                              logger.info(` Main currency ${ main_currency } , is the same as transaction currency, ${ transaction_currency }`)
+                              
+                              merchantBalanceDetails.main_balance += req.session.transactionAmount 
+                              // update value for the currency wallet 
+                              let i 
+                              for( i = 0; i < merchantBalanceDetails.wallets.length; i++ )
+                              {
+
+                                if( merchantBalanceDetails.wallets[i].currency === main_currency )
+                                {
+                                    merchantBalanceDetails.wallets[i].balance += req.session.transactionAmount 
+                                }
+                                
+                              }
+                
+                              await merchantBalanceDetails.save() 
+                            }
+                            else 
+                            {
+                                logger.info(` Main currency ${ main_currency } , is not the same as transaction currency, ${ transaction_currency }`)
+                               
+                                // Convert from transaction currency to main currency 
+                                const nairaToDollarRate = 500 
+                                const dollarAmount = req.session.transactionAmount 
+                                const nairaAmount = nairaToDollarRate * dollarAmount 
+
+                                // add amount In Naira to main balance 
+                                // add amount In Dollar to USD balance 
+
+                                merchantBalanceDetails.main_balance += nairaAmount 
+                                let i 
+                                for( i = 0; i < merchantBalanceDetails.wallets.length; i++ )
+                                {
+                                    if( merchantBalanceDetails.wallets[i].currency === transaction_currency )
+                                    {
+                                        merchantBalanceDetails.wallets[i].balance  += dollarAmount 
+                                    }
+                                }
+                                
+
+                                merchantBalanceDetails.save() 
+                            }
+
+                                // Update transactions  
+                                const newTransactionDoc = { tx_ref: req.session.tx_ref, customer_email: req.session.customer_email,
+                                channel: 'card', status:'success', currency: req.session.transactionCurrency ,
+                                amount: req.session.transactionAmount, description: req.session.customer_email +'\'s payment'}
+
+                                const newTransaction = new Transaction(newTransactionDoc) 
+                                const newTransactionSaved = await newTransaction.save() 
+
+
+                                console.log(" Transaction Updated ")
+
+                                return res.status(200).redirect( req.session.customer_redirect ) 
+                                
+
+                           }else 
+                           if( paymentComplete.data.status === 'pending' )
+                           {
+                                // send message of payment processing with transaction_id 
+                                // verify payment link can be used to verify payment 
+
+                                return res.status(200).json({"success": false, "msg":"transaction pending "})
+                           }
+                           else 
+                           {
+                                // Transaction Failed 
+                                return res.status(200).json({"success": false, "msg":"transaction failed"})
+                           }
+
+                        }
                         
 
-                        // For redirects 
-                        const tx_ref = req.query.tx_ref   
-                      
+                        
                     }
                     catch(err)
                     {

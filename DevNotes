@@ -10,3 +10,5 @@ What if in app.js I run the start database function and the server does not star
 Improve the database design
 Improve the server time keeping for accuracy 
 Account For Connection Timeouts and network errors 
+Design better endpoint names 
+Currency Should be in floats 

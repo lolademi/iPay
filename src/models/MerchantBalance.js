@@ -2,6 +2,7 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema 
 
 
+
 const WalletSchema = new Schema 
         (
             {
@@ -46,12 +47,16 @@ const MerchantBalanceSchema = new Schema
             },
             wallets:
             {
-                type: [WalletSchema]
+                type: [WalletSchema],
+                required: true, 
+                default: [{ currency: "NGN", balance: 0 }]
             }
         }
     )
 
+    
+
 
     const MerchantBalance = mongoose.model('merchant_balance',MerchantBalanceSchema)
 
-    module.exports = MerchantBalance 
+    module.exports = MerchantBalance
